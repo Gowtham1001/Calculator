@@ -4,6 +4,7 @@ import CalculatorButton from './CalculatorButton';
 import CalculatorDisplay from './CalculatorDisplay';
 import useCalculatorStore from '../stores/calculatorStore';
 import useThemeStore from '../stores/themeStore';
+import CalculatorControls from './CalculatorControls';
 
 const Workspace = () => {
   const { components, addComponent, updateComponentPosition } = useCalculatorStore();
@@ -57,26 +58,29 @@ const Workspace = () => {
   };
 
   return (
-    <div
-      ref={combinedRef}
-      className={`
-        relative w-full h-[600px] rounded-lg p-4
-        ${isDarkMode ? 'bg-gray-900' : 'bg-gray-200'}
-        ${isOver ? 'border-2 border-blue-500' : 'border-2 border-transparent'}
-        transition-colors duration-200
-      `}
-    >
-      <CalculatorDisplay />
-      {components.map((component) => (
-        <CalculatorButton
-          key={component.id}
-          id={component.id}
-          value={component.value}
-          position={component.position}
-          width={component.width}
-          height={component.height}
-        />
-      ))}
+    <div className="space-y-4">
+      <CalculatorControls />
+      <div
+        ref={combinedRef}
+        className={`
+          relative w-full h-[600px] rounded-lg p-4
+          ${isDarkMode ? 'bg-gray-900' : 'bg-gray-200'}
+          ${isOver ? 'border-2 border-blue-500' : 'border-2 border-transparent'}
+          transition-colors duration-200
+        `}
+      >
+        <CalculatorDisplay />
+        {components.map((component) => (
+          <CalculatorButton
+            key={component.id}
+            id={component.id}
+            value={component.value}
+            position={component.position}
+            width={component.width}
+            height={component.height}
+          />
+        ))}
+      </div>
     </div>
   );
 };

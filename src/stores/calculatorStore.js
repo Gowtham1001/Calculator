@@ -13,24 +13,119 @@ const useCalculatorStore = create((set, get) => ({
   },
   expression: '',
   result: '0',
-  history: [],
   
-  addComponent: (component) => 
-    set((state) => ({ 
-      components: [...state.components, {
-        ...component,
-        id: `component-${Date.now()}`,
-        width: 60,
-        height: 60,
-      }]
-    })),
+  // History tracking for undo/redo
+  history: [],
+  currentHistoryIndex: -1,
+  
+  // Saved layouts
+  savedLayouts: [],
 
-  removeComponent: (id) =>
+  // Action to save current state to history
+  saveToHistory: () => {
+    const currentState = get();
+    const newHistory = [
+      ...currentState.history.slice(0, currentState.currentHistoryIndex + 1),
+      {
+        components: [...currentState.components],
+        displayConfig: { ...currentState.displayConfig }
+      }
+    ];
+
+    set({
+      history: newHistory,
+      currentHistoryIndex: newHistory.length - 1
+    });
+  },
+
+  // Undo action
+  undo: () => {
+    const { currentHistoryIndex, history } = get();
+    if (currentHistoryIndex > 0) {
+      const previousState = history[currentHistoryIndex - 1];
+      set({
+        components: [...previousState.components],
+        displayConfig: { ...previousState.displayConfig },
+        currentHistoryIndex: currentHistoryIndex - 1
+      });
+    }
+  },
+
+  // Redo action
+  redo: () => {
+    const { currentHistoryIndex, history } = get();
+    if (currentHistoryIndex < history.length - 1) {
+      const nextState = history[currentHistoryIndex + 1];
+      set({
+        components: [...nextState.components],
+        displayConfig: { ...nextState.displayConfig },
+        currentHistoryIndex: currentHistoryIndex + 1
+      });
+    }
+  },
+
+  // Save current layout
+  saveLayout: (name) => {
+    const { components, displayConfig } = get();
+    const layout = {
+      id: Date.now(),
+      name,
+      components: [...components],
+      displayConfig: { ...displayConfig },
+      createdAt: new Date().toISOString()
+    };
+
+    set((state) => ({
+      savedLayouts: [...state.savedLayouts, layout]
+    }));
+
+    // Save to localStorage
+    const savedLayouts = JSON.parse(localStorage.getItem('calculatorLayouts') || '[]');
+    localStorage.setItem('calculatorLayouts', JSON.stringify([...savedLayouts, layout]));
+  },
+
+  // Load saved layout
+  loadLayout: (layoutId) => {
+    const { savedLayouts } = get();
+    const layout = savedLayouts.find(l => l.id === layoutId);
+    if (layout) {
+      set({
+        components: [...layout.components],
+        displayConfig: { ...layout.displayConfig }
+      });
+      get().saveToHistory();
+    }
+  },
+
+  // Load saved layouts from localStorage
+  loadSavedLayouts: () => {
+    const savedLayouts = JSON.parse(localStorage.getItem('calculatorLayouts') || '[]');
+    set({ savedLayouts });
+  },
+
+  // Existing actions modified to include history
+  addComponent: (component) => {
+    const newComponent = {
+      ...component,
+      id: `component-${Date.now()}`,
+      width: 60,
+      height: 60,
+    };
+    
+    set((state) => ({ 
+      components: [...state.components, newComponent]
+    }));
+    get().saveToHistory();
+  },
+
+  removeComponent: (id) => {
     set((state) => ({
       components: state.components.filter((comp) => comp.id !== id)
-    })),
+    }));
+    get().saveToHistory();
+  },
 
-  updateComponentPosition: (id, position) =>
+  updateComponentPosition: (id, position) => {
     set((state) => {
       if (id === 'display') {
         return {
@@ -45,7 +140,9 @@ const useCalculatorStore = create((set, get) => ({
           comp.id === id ? { ...comp, position } : comp
         )
       };
-    }),
+    });
+    get().saveToHistory();
+  },
 
   updateDisplayConfig: (config) =>
     set((state) => ({
